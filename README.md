@@ -22,10 +22,8 @@ Markdown Reader 是一个用来打开、预览和阅读本地 Markdown 文件的
 网页端入口：
 
 ```text
-https://your-project.vercel.app
+https://yan329689-bot.github.io/markdown-reader/
 ```
-
-正式部署后，请把这里替换成 Vercel 提供的公开访问地址。
 
 ### 网页端怎么使用
 
