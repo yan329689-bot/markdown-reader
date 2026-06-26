@@ -22,7 +22,7 @@ Markdown Reader 是一个用来打开、预览和阅读本地 Markdown 文件的
 网页端入口：
 
 ```text
-https://yan329689-bot.github.io/markdown-reader/
+https://md-reader-lemon.vercel.app
 ```
 
 ### 网页端怎么使用
