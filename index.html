@@ -253,6 +253,10 @@ code{font-family:"JetBrains Mono","Fira Code","Source Code Pro","Menlo",monospac
 #content th{background:var(--bg-table-header);font-weight:600}
 #content tr:nth-child(even){background:var(--bg-page)}
 #content img{max-width:100%;height:auto;display:block;margin:1.2em auto;border-radius:4px}
+#content img.image-load-error{
+  min-height:48px;padding:12px;border:1px dashed var(--border-table);
+  background:var(--bg-code);object-fit:contain;
+}
 #content ul,#content ol{padding-left:2em;margin:0.5em 0}
 #content li{margin:0.25em 0;line-height:1.7}
 #content li.task-list-item{list-style:none;margin-left:-1.5em}
@@ -340,7 +344,7 @@ code{font-family:"JetBrains Mono","Fira Code","Source Code Pro","Menlo",monospac
     </div>
   </div>
 </div>
-<input type="file" id="file-input" accept=".md,.markdown,.txt,.mdown,.mkd" multiple style="display:none">
+<input type="file" id="file-input" accept=".md,.markdown,.txt,.mdown,.mkd,image/*,.svg,.webp,.gif,.png,.jpg,.jpeg" multiple style="display:none">
 <div id="toast"></div>
 
 <script>
@@ -371,6 +375,7 @@ const wordcountEl = $('wordcount');
 const dragOverlay = $('drag-overlay');
 const toastEl = $('toast');
 const emptyState = $('empty-state');
+const imageAssetUrls = new Map();
 
 // ===== Markdown-it =====
 const md = window.markdownit({
@@ -422,6 +427,105 @@ function saveSession(){
   }catch(e){
     console.warn('Failed to save session', e);
   }
+}
+
+function isMarkdownFile(file){
+  return !!file && !!file.name && /\.(md|markdown|txt|mdown|mkd)$/i.test(file.name);
+}
+
+function isImageFile(file){
+  return !!file && !!file.name && (
+    /^image\//i.test(file.type || '') ||
+    /\.(png|jpe?g|gif|webp|svg|bmp|ico|avif)$/i.test(file.name)
+  );
+}
+
+function normalizeRelativePath(path){
+  const parts = [];
+  String(path || '').replace(/\\/g, '/').split('/').forEach(part=>{
+    if(!part || part === '.') return;
+    if(part === '..') parts.pop();
+    else parts.push(part);
+  });
+  return parts.join('/');
+}
+
+function getDirName(path){
+  const normalized = String(path || '').replace(/\\/g, '/');
+  const idx = normalized.lastIndexOf('/');
+  return idx >= 0 ? normalized.slice(0, idx) : '';
+}
+
+function getBaseName(path){
+  return String(path || '').replace(/\\/g, '/').split('/').pop();
+}
+
+function isExternalImageSrc(src){
+  return /^(https?:|data:|blob:|file:|about:)/i.test(String(src || ''));
+}
+
+function filePathToUrl(path){
+  const normalized = String(path || '').replace(/\\/g, '/');
+  const encoded = normalized.split('/').map(part=>encodeURIComponent(part)).join('/');
+  return 'file://' + (encoded.startsWith('/') ? encoded : '/' + encoded);
+}
+
+function resolveImageSrc(fileObj, src){
+  if(!src || isExternalImageSrc(src) || src.startsWith('#')) return src;
+
+  const cleanSrc = String(src).split('#')[0].split('?')[0];
+  const suffix = String(src).slice(cleanSrc.length);
+
+  if(window.electronAPI && fileObj && fileObj.path && fileObj.path !== fileObj.name){
+    if(cleanSrc.startsWith('/')) return filePathToUrl(cleanSrc) + suffix;
+    const baseDir = getDirName(fileObj.path);
+    return filePathToUrl(normalizeRelativePath(baseDir + '/' + cleanSrc)) + suffix;
+  }
+
+  const baseDir = fileObj ? getDirName(fileObj.path || fileObj.name) : '';
+  const candidates = [
+    normalizeRelativePath(baseDir + '/' + cleanSrc),
+    normalizeRelativePath(cleanSrc),
+    getBaseName(cleanSrc)
+  ].filter(Boolean);
+
+  for(const candidate of candidates){
+    const objectUrl = imageAssetUrls.get(candidate.toLowerCase());
+    if(objectUrl) return objectUrl + suffix;
+  }
+
+  return src;
+}
+
+function applyImageSources(fileObj){
+  contentEl.querySelectorAll('img').forEach(img=>{
+    const originalSrc = img.getAttribute('src') || '';
+    const resolvedSrc = resolveImageSrc(fileObj, originalSrc);
+    if(resolvedSrc && resolvedSrc !== originalSrc){
+      img.setAttribute('src', resolvedSrc);
+      img.setAttribute('data-original-src', originalSrc);
+    }
+    img.addEventListener('error', function(){
+      img.classList.add('image-load-error');
+      img.title = '图片加载失败: ' + originalSrc;
+    }, {once:true});
+  });
+}
+
+function registerImageAssets(files){
+  Array.from(files || []).forEach(file=>{
+    if(!isImageFile(file)) return;
+    const objectUrl = URL.createObjectURL(file);
+    const relativePath = normalizeRelativePath(file.webkitRelativePath || file.name);
+    const keys = new Set([
+      relativePath,
+      normalizeRelativePath(file.name),
+      getBaseName(file.name)
+    ]);
+    keys.forEach(key=>{
+      if(key) imageAssetUrls.set(key.toLowerCase(), objectUrl);
+    });
+  });
 }
 
 async function restoreSession(){
@@ -704,6 +808,8 @@ function renderFile(fileObj){
     }catch(e){}
   }
 
+  applyImageSources(fileObj);
+
   contentWrapper.scrollTop = 0;
 }
 
@@ -785,6 +891,17 @@ function loadFile(file){
   reader.readAsText(file);
 }
 
+function loadFiles(files){
+  const list = Array.from(files || []);
+  registerImageAssets(list);
+  const markdownFiles = list.filter(isMarkdownFile);
+  if(!markdownFiles.length && list.some(isImageFile)){
+    showToast('请同时选择 Markdown 文件和图片文件');
+    return;
+  }
+  markdownFiles.forEach(loadFile);
+}
+
 // ===== Open File Button =====
 function triggerOpen(){
   if(window.electronAPI){
@@ -810,7 +927,7 @@ function triggerOpen(){
 $('open-file-btn').onclick = triggerOpen;
 $('drop-btn').onclick = triggerOpen;
 fileInput.addEventListener('change', function(){
-  Array.from(fileInput.files).forEach(loadFile);
+  loadFiles(fileInput.files);
   fileInput.value = '';
 });
 
@@ -832,9 +949,7 @@ document.addEventListener('drop', function(e){
   dragCounter = 0;
   dragOverlay.classList.remove('active');
   if(e.dataTransfer.files && e.dataTransfer.files.length){
-    Array.from(e.dataTransfer.files).forEach(f=>{
-      if(f.name.match(/\.(md|markdown|txt|mdown|mkd)$/i)) loadFile(f);
-    });
+    loadFiles(e.dataTransfer.files);
   } else if(e.dataTransfer.items && e.dataTransfer.items.length){
     // Handle Electron file drops with path
     Array.from(e.dataTransfer.items).forEach(item=>{
