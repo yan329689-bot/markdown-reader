@@ -12,11 +12,11 @@
   "build": {
     "appId": "com.mdreader.app",
     "productName": "Markdown Reader",
+    "afterPack": "scripts/after-pack.js",
     "mac": {
       "category": "public.app-category.productivity",
       "target": [
-        "dmg",
-        "zip"
+        "dmg"
       ],
       "icon": "build/icon.icns",
       "darkModeSupport": true,
