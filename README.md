@@ -12,7 +12,6 @@ Markdown Reader 是一个用来打开、预览和阅读本地 Markdown 文件的
 - 支持亮色/暗色主题切换
 - 支持 A- / A+ 调整字号
 - 支持表格自适应宽度，长链接和长路径自动换行
-- 刷新页面后自动恢复已打开的文件会话
 - 支持 KaTeX 公式、代码高亮、任务列表
 
 ## 网页端
@@ -60,38 +59,6 @@ https://md-reader-lemon.vercel.app
 - 支持显示同一次选择/拖拽进来的本地图片资源
 - 查看自动生成的目录侧栏
 - 调整字号、切换主题
-- 刷新页面后恢复当前打开的文件内容
-
-### 隐私说明
-
-网页端读取文件发生在浏览器本地。用户通过文件选择器打开的 Markdown 内容不会被本应用上传到服务器。
-
-浏览器出于安全限制，不能像桌面端一样随意读取电脑上的任意文件路径，这是正常行为。
-
-### 本地预览网页端
-
-```bash
-python3 -m http.server 4173 --directory dist
-```
-
-然后访问：
-
-```text
-http://127.0.0.1:4173
-```
-
-### 部署到 Vercel
-
-项目已包含 `vercel.json`，Vercel 会直接发布 `dist/` 目录。
-
-通过 GitHub 导入 Vercel 时：
-
-- Framework Preset: Other
-- Install Command: 空
-- Build Command: 空
-- Output Directory: `dist`
-
-也可以参考 [DEPLOY.md](./DEPLOY.md)。
 
 ## 桌面端
 
