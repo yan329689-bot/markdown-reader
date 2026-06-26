@@ -33,11 +33,20 @@ https://yan329689-bot.github.io/markdown-reader/
 4. 页面会立即渲染 Markdown 内容
 5. 可以使用目录侧栏、主题切换、字号调整等功能辅助阅读
 
+如果 Markdown 里引用了本地相对路径图片，例如：
+
+```markdown
+![示例图片](images/demo.png)
+```
+
+网页端需要在同一次文件选择中把 Markdown 文件和对应图片文件一起选中，或一起拖进页面。浏览器出于安全限制，不能在只选择一个 Markdown 文件时自动读取同目录下的其他图片文件。
+
 ### 网页端可以做什么
 
 - 点击“打开”按钮选择本地 Markdown 文件
 - 拖拽 `.md` / `.markdown` / `.txt` 文件到页面中打开
 - 上传 Markdown 文件后立即预览内容
+- 支持显示同一次选择/拖拽进来的本地图片资源
 - 查看自动生成的目录侧栏
 - 调整字号、切换主题
 - 刷新页面后恢复当前打开的文件内容
@@ -76,6 +85,8 @@ http://127.0.0.1:4173
 ## 桌面端
 
 桌面端适合经常阅读本地 Markdown 文件的用户。它基于 Electron，可以作为 macOS 应用安装到“应用程序 / Applications”，之后可以从启动台或 Spotlight 直接打开。
+
+桌面端会按 Markdown 文件所在目录自动解析本地相对图片路径，例如 `images/demo.png`、`./assets/a.jpg`。
 
 ### 本地开发运行
 
